@@ -20,6 +20,8 @@ until [[ $(${REDIS_CMDLINE} PING) == "PONG" ]]; do
   sleep 2
 done
 
+if [[ -z "$SKIP_DOCKER_API" ]] ; then
+
 # Check mysql_upgrade (master and slave)
 CONTAINER_ID=
 until [[ ! -z "${CONTAINER_ID}" ]] && [[ "${CONTAINER_ID}" =~ ^[[:alnum:]]*$ ]]; do
@@ -76,6 +78,8 @@ if [[ -z ${TZ_CHECK} ]] || [[ "${TZ_CHECK}" == "NULL" ]]; then
   echo "MySQL mysql_tzinfo_to_sql - debug output:"
   echo ${SQL_FULL_TZINFO_IMPORT_RETURN}
 fi
+
+fi # SKIP_DOCKER_API
 
 if [[ "${MASTER}" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
   echo "We are master, preparing..."

@@ -97,13 +97,15 @@ catch (PDOException $e) {
 exit;
 }
 // Stop when dockerapi is not available
-if (fsockopen("tcp://dockerapi", 443, $errno, $errstr) === false) {
-?>
-<center style='font-family:sans-serif;'>Connection to dockerapi container failed.<br /><br />The following error was reported:<br/><?=$errno;?> - <?=$errstr;?></center>
-<?php
-exit;
-}
-
+if (!isset($_ENV['SKIP_DOCKER_API']) && !$_ENV['SKIP_DOCKER_API']) {
+  if ( fsockopen( "tcp://dockerapi", 443, $errno, $errstr ) === false ) {
+    ?>
+    <center style='font-family:sans-serif;'>Connection to dockerapi container failed.<br/><br/>The following error was
+      reported:<br/><?= $errno; ?> - <?= $errstr; ?></center>
+    <?php
+    exit;
+  }
+} // SKIP_DOCKER_API
 // OAuth2
 class mailcowPdo extends OAuth2\Storage\Pdo {
   public function __construct($connection, $config = array()) {
