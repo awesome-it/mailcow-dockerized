@@ -107,6 +107,7 @@ http_response_code(500);
 exit;
 }
 // Stop when dockerapi is not available
+if (!isset($_ENV['SKIP_DOCKER_API']) && !$_ENV['SKIP_DOCKER_API']) {
 if (fsockopen("tcp://dockerapi", 443, $errno, $errstr) === false) {
   http_response_code(500);
 ?>
@@ -114,7 +115,7 @@ if (fsockopen("tcp://dockerapi", 443, $errno, $errstr) === false) {
 <?php
 exit;
 }
-
+} // SKIP_DOCKER_API
 // OAuth2
 class mailcowPdo extends OAuth2\Storage\Pdo {
   public function __construct($connection, $config = array()) {
