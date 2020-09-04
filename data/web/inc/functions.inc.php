@@ -505,10 +505,11 @@ function verify_hash($hash, $password) {
   }
   return false;
 }
-function check_login($user, $pass) {
+function check_login($user, $pass, $skip_ldap = false) {
 	global $pdo;
 	global $redis;
 	global $imap_server;
+  global $ldap_config;
 	if (!filter_var($user, FILTER_VALIDATE_EMAIL) && !ctype_alnum(str_replace(array('_', '.', '-'), '', $user))) {
     $_SESSION['return'][] =  array(
       'type' => 'danger',
@@ -517,6 +518,11 @@ function check_login($user, $pass) {
     );
 		return false;
 	}
+  if(!$skip_ldap && $ldap_config) {
+    $retval = ldap_check_login($user, $pass);
+    if($retval !== false)
+      return $retval;
+  }
 	$user = strtolower(trim($user));
 	$stmt = $pdo->prepare("SELECT `password` FROM `admin`
 			WHERE `superadmin` = '1'
