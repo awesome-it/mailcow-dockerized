@@ -37,7 +37,7 @@ function init_db_schema() {
       SELECT logged_in_as, IFNULL(GROUP_CONCAT(send_as SEPARATOR ' '), '') AS send_as_acl FROM sender_acl
       WHERE send_as NOT LIKE '@%'
       GROUP BY logged_in_as;",
-    // END 
+    // END
     "grouped_sender_acl_external" => "CREATE VIEW grouped_sender_acl_external (username, send_as_acl) AS
       SELECT logged_in_as, IFNULL(GROUP_CONCAT(send_as SEPARATOR ' '), '') AS send_as_acl FROM sender_acl
       WHERE send_as NOT LIKE '@%' AND external = '1'
@@ -955,7 +955,7 @@ function init_db_schema() {
         $stmt = $pdo->query("SHOW TABLES LIKE 'mailbox'");
         $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
         if ($num_results != 0) {
-          $stmt = $pdo->query("SHOW COLUMNS FROM `mailbox` LIKE '%tls_enforce%'"); 
+          $stmt = $pdo->query("SHOW COLUMNS FROM `mailbox` LIKE '%tls_enforce%'");
           $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
           if ($num_results != 0) {
             $stmt = $pdo->query("SELECT `username`, `tls_enforce_in`, `tls_enforce_out` FROM `mailbox`");
@@ -966,10 +966,10 @@ function init_db_schema() {
           }
         }
       }
-      $stmt = $pdo->query("SHOW TABLES LIKE '" . $table . "'"); 
+      $stmt = $pdo->query("SHOW TABLES LIKE '" . $table . "'");
       $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
       if ($num_results != 0) {
-        $stmt = $pdo->prepare("SELECT CONCAT('ALTER TABLE ', `table_schema`, '.', `table_name`, ' DROP FOREIGN KEY ', `constraint_name`, ';') AS `FKEY_DROP` FROM `information_schema`.`table_constraints`
+        $stmt = $pdo->prepare("SELECT CONCAT('ALTER TABLE `', `table_schema`, '`.`', `table_name`, '` DROP FOREIGN KEY ', `constraint_name`, ';') AS `FKEY_DROP` FROM `information_schema`.`table_constraints`
           WHERE `constraint_type` = 'FOREIGN KEY' AND `table_name` = :table;");
         $stmt->execute(array(':table' => $table));
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -977,7 +977,7 @@ function init_db_schema() {
           $pdo->query($row['FKEY_DROP']);
         }
         foreach($properties['cols'] as $column => $type) {
-          $stmt = $pdo->query("SHOW COLUMNS FROM `" . $table . "` LIKE '" . $column . "'"); 
+          $stmt = $pdo->query("SHOW COLUMNS FROM `" . $table . "` LIKE '" . $column . "'");
           $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
           if ($num_results == 0) {
             if (strpos($type, 'AUTO_INCREMENT') !== false) {
@@ -999,7 +999,7 @@ function init_db_schema() {
           if (strtolower($key_type) == 'primary') {
             foreach ($key_content as $key_values) {
               $fields = "`" . implode("`, `", $key_values) . "`";
-              $stmt = $pdo->query("SHOW KEYS FROM `" . $table . "` WHERE Key_name = 'PRIMARY'"); 
+              $stmt = $pdo->query("SHOW KEYS FROM `" . $table . "` WHERE Key_name = 'PRIMARY'");
               $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
               $is_drop = ($num_results != 0) ? "DROP PRIMARY KEY, " : "";
               $pdo->query("ALTER TABLE `" . $table . "` " . $is_drop . "ADD PRIMARY KEY (" . $fields . ")");
@@ -1008,7 +1008,7 @@ function init_db_schema() {
           if (strtolower($key_type) == 'key') {
             foreach ($key_content as $key_name => $key_values) {
               $fields = "`" . implode("`, `", $key_values) . "`";
-              $stmt = $pdo->query("SHOW KEYS FROM `" . $table . "` WHERE Key_name = '" . $key_name . "'"); 
+              $stmt = $pdo->query("SHOW KEYS FROM `" . $table . "` WHERE Key_name = '" . $key_name . "'");
               $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
               $is_drop = ($num_results != 0) ? "DROP INDEX `" . $key_name . "`, " : "";
               $pdo->query("ALTER TABLE `" . $table . "` " . $is_drop . "ADD KEY `" . $key_name . "` (" . $fields . ")");
@@ -1038,8 +1038,8 @@ function init_db_schema() {
           }
         }
         // Drop all vanished columns
-        $stmt = $pdo->query("SHOW COLUMNS FROM `" . $table . "`"); 
-        $cols_in_table = $stmt->fetchAll(PDO::FETCH_ASSOC); 
+        $stmt = $pdo->query("SHOW COLUMNS FROM `" . $table . "`");
+        $cols_in_table = $stmt->fetchAll(PDO::FETCH_ASSOC);
         while ($row = array_shift($cols_in_table)) {
           if (!array_key_exists($row['Field'], $properties['cols'])) {
             $pdo->query("ALTER TABLE `" . $table . "` DROP COLUMN `" . $row['Field'] . "`;");
@@ -1047,8 +1047,8 @@ function init_db_schema() {
         }
 
         // Step 1: Get all non-primary keys, that currently exist and those that should exist
-        $stmt = $pdo->query("SHOW KEYS FROM `" . $table . "` WHERE `Key_name` != 'PRIMARY'"); 
-        $keys_in_table = $stmt->fetchAll(PDO::FETCH_ASSOC); 
+        $stmt = $pdo->query("SHOW KEYS FROM `" . $table . "` WHERE `Key_name` != 'PRIMARY'");
+        $keys_in_table = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $keys_to_exist = array();
         if (isset($properties['keys']['unique']) && is_array($properties['keys']['unique'])) {
           foreach ($properties['keys']['unique'] as $key_name => $key_values) {
@@ -1074,7 +1074,7 @@ function init_db_schema() {
         }
         // Step 3: Drop all vanished primary keys
         if (!isset($properties['keys']['primary'])) {
-          $stmt = $pdo->query("SHOW KEYS FROM `" . $table . "` WHERE Key_name = 'PRIMARY'"); 
+          $stmt = $pdo->query("SHOW KEYS FROM `" . $table . "` WHERE Key_name = 'PRIMARY'");
           $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
           if ($num_results != 0) {
             $pdo->query("ALTER TABLE `" . $table . "` DROP PRIMARY KEY");
@@ -1130,7 +1130,7 @@ function init_db_schema() {
     }
 
     // Inject admin if not exists
-    $stmt = $pdo->query("SELECT NULL FROM `admin`"); 
+    $stmt = $pdo->query("SELECT NULL FROM `admin`");
     $num_results = count($stmt->fetchAll(PDO::FETCH_ASSOC));
     if ($num_results == 0) {
     $pdo->query("INSERT INTO `admin` (`username`, `password`, `superadmin`, `created`, `modified`, `active`)
