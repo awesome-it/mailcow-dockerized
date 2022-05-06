@@ -807,10 +807,11 @@ function verify_hash($hash, $password) {
   }
   return false;
 }
-function check_login($user, $pass, $app_passwd_data = false) {
+function check_login($user, $pass, $app_passwd_data = false, $skip_ldap = false) {
   global $pdo;
   global $redis;
   global $imap_server;
+  global $ldap_config;
 
   if (!filter_var($user, FILTER_VALIDATE_EMAIL) && !ctype_alnum(str_replace(array('_', '.', '-'), '', $user))) {
     $_SESSION['return'][] =  array(
@@ -819,6 +820,12 @@ function check_login($user, $pass, $app_passwd_data = false) {
       'msg' => 'malformed_username'
     );
     return false;
+  }
+
+  if(!$skip_ldap && $ldap_config) {
+    $retval = ldap_check_login($user, $pass);
+    if($retval !== false)
+      return $retval;
   }
 
   // Validate admin
@@ -1278,7 +1285,7 @@ function set_tfa($_data) {
             $_data['registration']->certificate,
             0
         ));
-    
+
         $_SESSION['return'][] =  array(
             'type' => 'success',
             'log' => array(__FUNCTION__, $_data_log),
@@ -1686,7 +1693,7 @@ function verify_tfa_login($username, $_data, $WebAuthn) {
             $process_webauthn = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (empty($process_webauthn) || empty($process_webauthn['publicKey']) || empty($process_webauthn['username'])) return false;
-            
+
             if ($process_webauthn['publicKey'] === false) {
                 $_SESSION['return'][] =  array(
                     'type' => 'danger',
@@ -1707,7 +1714,7 @@ function verify_tfa_login($username, $_data, $WebAuthn) {
                 return false;
             }
 
-            
+
             $stmt = $pdo->prepare("SELECT `superadmin` FROM `admin` WHERE `username` = :username");
             $stmt->execute(array(':username' => $process_webauthn['username']));
             $obj_props = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1726,7 +1733,7 @@ function verify_tfa_login($username, $_data, $WebAuthn) {
                 }
             }
 
-        
+
             if ($process_webauthn['username'] != $_SESSION['pending_mailcow_cc_username']){
                 $_SESSION['return'][] =  array(
                     'type' => 'danger',
