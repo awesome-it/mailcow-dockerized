@@ -811,10 +811,11 @@ function verify_hash($hash, $password) {
   }
   return false;
 }
-function check_login($user, $pass, $app_passwd_data = false) {
+function check_login($user, $pass, $app_passwd_data = false, $skip_ldap = false) {
   global $pdo;
   global $redis;
   global $imap_server;
+  global $ldap_config;
 
   if (!filter_var($user, FILTER_VALIDATE_EMAIL) && !ctype_alnum(str_replace(array('_', '.', '-'), '', $user))) {
     $_SESSION['return'][] =  array(
@@ -823,6 +824,12 @@ function check_login($user, $pass, $app_passwd_data = false) {
       'msg' => 'malformed_username'
     );
     return false;
+  }
+
+  if(!$skip_ldap && $ldap_config) {
+    $retval = ldap_check_login($user, $pass);
+    if($retval !== false)
+      return $retval;
   }
 
   // Validate admin
@@ -939,10 +946,10 @@ function check_login($user, $pass, $app_passwd_data = false) {
     $stmt->execute(array(':user' => $user));
     $rows = array_merge($rows, $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
-  foreach ($rows as $row) { 
+  foreach ($rows as $row) {
     // verify password
     if (verify_hash($row['password'], $pass) !== false) {
-      if (!array_key_exists("app_passwd_id", $row)){ 
+      if (!array_key_exists("app_passwd_id", $row)){
         // password is not a app password
         // check for tfa authenticators
         $authenticators = get_tfa($user);
@@ -1028,7 +1035,7 @@ function update_sogo_static_view($mailbox = null) {
     // Check if the mailbox exists
     $stmt = $pdo->prepare("SELECT username FROM mailbox WHERE username = :mailbox AND active = '1'");
     $stmt->execute(array(':mailbox' => $mailbox));
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);  
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row){
       $mailbox_exists = true;
     }
@@ -1056,7 +1063,7 @@ function update_sogo_static_view($mailbox = null) {
               LEFT OUTER JOIN grouped_sender_acl_external external_acl ON external_acl.username = mailbox.username
             WHERE
               mailbox.active = '1'";
-  
+
   if ($mailbox_exists) {
     $query .= " AND mailbox.username = :mailbox";
     $stmt = $pdo->prepare($query);
@@ -1065,9 +1072,9 @@ function update_sogo_static_view($mailbox = null) {
     $query .= " GROUP BY mailbox.username";
     $stmt = $pdo->query($query);
   }
-  
+
   $stmt = $pdo->query("DELETE FROM _sogo_static_view WHERE `c_uid` NOT IN (SELECT `username` FROM `mailbox` WHERE `active` = '1');");
-  
+
   flush_memcached();
 }
 function edit_user_account($_data) {
@@ -1345,7 +1352,7 @@ function set_tfa($_data) {
             $_data['registration']->certificate,
             0
         ));
-    
+
         $_SESSION['return'][] =  array(
             'type' => 'success',
             'log' => array(__FUNCTION__, $_data_log),
@@ -1515,7 +1522,7 @@ function unset_tfa_key($_data) {
 
   try {
     if (!is_numeric($id)) $access_denied = true;
-    
+
     // set access_denied error
     if ($access_denied){
       $_SESSION['return'][] = array(
@@ -1524,7 +1531,7 @@ function unset_tfa_key($_data) {
         'msg' => 'access_denied'
       );
       return false;
-    } 
+    }
 
     // check if it's last key
     $stmt = $pdo->prepare("SELECT COUNT(*) AS `keys` FROM `tfa`
@@ -1573,7 +1580,7 @@ function get_tfa($username = null, $id = null) {
         WHERE `username` = :username AND `active` = '1'");
     $stmt->execute(array(':username' => $username));
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
- 
+
     // no tfa methods found
     if (count($results) == 0) {
         $data['name'] = 'none';
@@ -1781,8 +1788,8 @@ function verify_tfa_login($username, $_data) {
                   'msg' => array('webauthn_authenticator_failed')
               );
               return false;
-            } 
-            
+            }
+
             if (empty($process_webauthn['publicKey']) || $process_webauthn['publicKey'] === false) {
                 $_SESSION['return'][] =  array(
                     'type' => 'danger',
@@ -2144,7 +2151,7 @@ function cors($action, $data = null) {
           'msg' => 'access_denied'
         );
         return false;
-      }    
+      }
 
       $allowed_origins = isset($data['allowed_origins']) ? $data['allowed_origins'] : array($_SERVER['SERVER_NAME']);
       $allowed_origins = !is_array($allowed_origins) ? array_filter(array_map('trim', explode("\n", $allowed_origins))) : $allowed_origins;
@@ -2177,7 +2184,7 @@ function cors($action, $data = null) {
         $redis->hMSet('CORS_SETTINGS', array(
           'allowed_origins' => implode(', ', $allowed_origins),
           'allowed_methods' => implode(', ', $allowed_methods)
-        ));   
+        ));
       } catch (RedisException $e) {
         $_SESSION['return'][] = array(
           'type' => 'danger',
@@ -2229,10 +2236,10 @@ function cors($action, $data = null) {
       header('Access-Control-Allow-Headers: Accept, Content-Type, X-Api-Key, Origin');
 
       // Access-Control settings requested, this is just a preflight request
-      if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS' && 
+      if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS' &&
         isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD']) &&
         isset($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_HEADERS'])) {
-  
+
         $allowed_methods = explode(', ', $cors_settings["allowed_methods"]);
         if (in_array($_SERVER['HTTP_ACCESS_CONTROL_REQUEST_METHOD'], $allowed_methods, true))
           // method allowed send 200 OK

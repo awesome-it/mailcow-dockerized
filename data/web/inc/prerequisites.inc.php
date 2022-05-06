@@ -268,8 +268,7 @@ $langFile = $_SERVER['DOCUMENT_ROOT'] . '/lang/lang.'.$_SESSION['mailcow_locale'
 if(file_exists($langFile)) {
   $lang = array_merge_real($lang, json_decode(file_get_contents($langFile), true));
 }
-
-
+require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.ldap.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.acl.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.address_rewriting.inc.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/inc/functions.admin.inc.php';
@@ -321,7 +320,7 @@ $UI_TEXTS = customize('get', 'ui_texts');
 if (file_exists('/web/css/themes/'.$UI_THEME.'-bootstrap.css'))
   $css_minifier->add('/web/css/themes/'.$UI_THEME.'-bootstrap.css');
 else
-  $css_minifier->add('/web/css/themes/lumen-bootstrap.css'); 
+  $css_minifier->add('/web/css/themes/lumen-bootstrap.css');
 // minify css build files
 foreach ($css_dir as $css_file) {
   $css_minifier->add('/web/css/build/' . $css_file);
