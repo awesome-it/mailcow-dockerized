@@ -1361,7 +1361,7 @@ function init_db_schema() {
         "key_size" => 2048,
         "max_quota_for_domain" => 10240 * 1048576,
       )
-    );     
+    );
     $default_mailbox_template = array(
       "template" => "Default",
       "type" => "mailbox",
@@ -1396,7 +1396,7 @@ function init_db_schema() {
         "acl_quarantine_category" => 1,
         "acl_app_passwds" => 1,
       )
-    );        
+    );
     $stmt = $pdo->prepare("SELECT id FROM `templates` WHERE `type` = :type AND `template` = :template");
     $stmt->execute(array(
       ":type" => "domain",
@@ -1410,8 +1410,8 @@ function init_db_schema() {
         ":type" => "domain",
         ":template" => $default_domain_template["template"],
         ":attributes" => json_encode($default_domain_template["attributes"])
-      )); 
-    }    
+      ));
+    }
     $stmt = $pdo->prepare("SELECT id FROM `templates` WHERE `type` = :type AND `template` = :template");
     $stmt->execute(array(
       ":type" => "mailbox",
@@ -1425,8 +1425,8 @@ function init_db_schema() {
         ":type" => "mailbox",
         ":template" => $default_mailbox_template["template"],
         ":attributes" => json_encode($default_mailbox_template["attributes"])
-      )); 
-    } 
+      ));
+    }
 
     if (php_sapi_name() == "cli") {
       echo "DB initialization completed" . PHP_EOL;
