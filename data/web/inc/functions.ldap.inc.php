@@ -68,7 +68,7 @@ function ldap_sync_db($info, $user, $pass) {
 
 	// Update table "mailbox" using the "mail" attribute
 	$stmt = $pdo->prepare("
-		UPDATE `mailbox` SET password = ? 
+		UPDATE `mailbox` SET password = ?
 		WHERE `username` IN (".join(',', array_fill(0, count($mail), '?')).")");
 	$stmt->execute(array_merge(array(hash_password($pass)), $mail));
 
@@ -99,5 +99,5 @@ function ldap_check_login($user, $pass) {
 	// We are successfully logged in. Update db and pass back to normal login
 	ldap_sync_db($info, $user, $pass);
 
-	return check_login($user, $pass, true);
+	return check_login($user, $pass, false, true);
 }
