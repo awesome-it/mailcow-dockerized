@@ -42,7 +42,7 @@ function ldap_do_bind() {
 	return $ldap;
 }
 
-function ldap_get_user_info($ldap, $user, $attr = array('dn', 'uid', 'mail')) {
+function ldap_get_user_info($ldap, $user, $attr = array('dn', 'uid', 'mail', 'memberOf')) {
 	global $ldap_config;
 	$base_dn = $ldap_config['base_dn'];
 	$filter  = str_replace('%', $user, isset($ldap_config['user_filter']) ? $ldap_config['user_filter'] : '(|(uid=%*)(mail=%*))');
@@ -57,27 +57,30 @@ function ldap_do_login($ldap, $info, $pass) {
 }
 
 function ldap_sync_db($info, $user, $pass) {
-	global $pdo;
+  global $pdo;
 
-	$mail = array();
-	if(isset($info['mail']['count'])) {
-		for($i = 0; $i < $info['mail']['count']; $i ++) {
-			array_push($mail, $info['mail'][ $i ]);
-		}
-	}
+  $mail = array();
+  if ( isset( $info['mail']['count'] ) ) {
+    for ( $i = 0; $i < $info['mail']['count']; $i ++ ) {
+      array_push( $mail, $info['mail'][ $i ] );
+    }
+  }
 
-	// Update table "mailbox" using the "mail" attribute
-	$stmt = $pdo->prepare("
-		UPDATE `mailbox` SET password = ?
-		WHERE `username` IN (".join(',', array_fill(0, count($mail), '?')).")");
-	$stmt->execute(array_merge(array(hash_password($pass)), $mail));
+  $hashed_pass = hash_password( $pass );
+  $uid = $info["uid"][0];
 
-	// Update table "admin"
-	$stmt = $pdo->prepare("UPDATE `admin` SET password = :pass WHERE `username` LIKE :user");
-	$stmt->execute(array(
-		'user' => $user,
-		'pass' => hash_password($pass)
-	));
+  // Update table "mailbox" using the "mail" attribute
+  $stmt = $pdo->prepare( "
+                UPDATE `mailbox` SET password = ?
+                WHERE `username` IN (" . join( ',', array_fill( 0, count( $mail ), '?' ) ) . ")" );
+  $stmt->execute( array_merge( array( $hashed_pass ), $mail ) );
+
+  // Update table "admin" if the user is in (keycloak/ldap) group "mailcow". Set superuser if the user is in (keycloak/ldap) group "admin".
+  if(in_array("mailcow", $info["memberof"])) {
+    $is_super_admin = in_array("admin", $info["memberof"]);
+    $stmt = $pdo->prepare( "INSERT INTO `admin` (username, password, superadmin) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE password = ?, superadmin = ?" );
+    $stmt->execute( array( $uid, $hashed_pass, $is_super_admin, $hashed_pass, $is_super_admin ) );
+  }
 }
 
 function ldap_check_login($user, $pass) {
