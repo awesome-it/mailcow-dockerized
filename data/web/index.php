@@ -8,7 +8,8 @@ if (isset($_SESSION['mailcow_cc_role']) && isset($_SESSION['oauth2_request'])) {
   exit();
 }
 elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'admin') {
-  header('Location: /debug');
+  // debug.php required Docker support.
+  header('Location: /mailbox');
   exit();
 }
 elseif (isset($_SESSION['mailcow_cc_role']) && $_SESSION['mailcow_cc_role'] == 'domainadmin') {
