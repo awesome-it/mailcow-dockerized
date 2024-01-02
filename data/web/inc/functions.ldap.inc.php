@@ -77,7 +77,7 @@ function ldap_sync_db($info, $user, $pass) {
 
   // Update table "admin" if the user is in (keycloak/ldap) group "mailcow". Set superuser if the user is in (keycloak/ldap) group "admin".
   if(in_array("mailcow", $info["memberof"])) {
-    $is_super_admin = in_array("admin", $info["memberof"]);
+    $is_super_admin = in_array("admin", $info["memberof"]) ? 1 : 0;
     $stmt = $pdo->prepare( "INSERT INTO `admin` (username, password, superadmin) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE password = ?, superadmin = ?" );
     $stmt->execute( array( $uid, $hashed_pass, $is_super_admin, $hashed_pass, $is_super_admin ) );
   }
